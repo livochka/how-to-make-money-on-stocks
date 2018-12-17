@@ -1,0 +1,199 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(quantmod)
+start <- as.Date("2008-01-01")
+end <- as.Date("2018-01-01")
+
+getSymbols("AAPL", src = "yahoo", from = start, to = end)
+```
+
+
+```{r}
+monthdatas<-new.env()
+
+c <- 0
+for (i in 2008:2017){
+  for (j in 1:12){
+    if (j >= 10){
+      m <- paste(toString(i),"-",toString(j), sep="")
+    }
+    else{
+      m <- paste(toString(i),"-0",toString(j), sep="")
+    }
+    month_data <- data <- AAPL[m, "AAPL.Open"]
+    #print(class(coredata(month_data)))
+    monthdatas[[toString(c)]] <- coredata(month_data)
+    c = c +1
+  }
+}
+
+cat("c", c)
+#print(monthdatas)
+#for (i in 0:c){
+#  print(monthdatas[[toString(i)]])
+#}
+
+data <- AAPL["2017-08"]$AAPL.Open
+estim_params <- function(monthly_data){
+  ups <- 1
+  downs <- 1
+  up.days <- 0
+  down.days <- 0
+  n <- length(monthly_data)
+  previous <-monthly_data[1]
+  #cat("len month", n)
+  for (current in monthly_data[2:n]){
+    x <- current/previous
+    
+    if (0 < x & 1 > x) {
+      downs = downs * x
+      down.days = down.days + 1
+    }
+    if (x > 1){
+      ups = ups * x
+      up.days = up.days + 1
+    }
+    if (x == 1){
+      print("no price change")
+      n = n - 1
+    }
+    previous = current
+  }
+  up <- ups ^ (1/up.days)
+  down <- downs ^ (1/down.days)
+  
+  p <- up.days / (n-1) # p to go up
+
+  return(c(up, down, p, 1-p))
+} 
+
+#plot(data)
+#print(data)
+#print(estim_params(coredata(data)))
+
+```
+
+```{r}
+comb = function(n, x) {
+  factorial(n) / factorial(n-x) / factorial(x)
+}
+```
+
+```{r}
+find_probability <- function(i, u, d, p, q, m, n){
+  gap <- floor((m - n*log(d))/log(u/d))
+  l <- m - (i * log(u/d) + n * (log(d) + 1))/2
+  if (! is.nan(i) & ! is.nan(gap)){
+    if (i >= gap){return ( p ^ i * q ^ (n - i) * comb(n, l))}
+    else {return(comb(n, i) * p ^ i * q ^ (n - i))}
+  }else {
+    return(0)
+  }
+}
+```
+
+```{r}
+expected_maximum <- function(u, d, p, q, n){
+  mean <- 0
+  for (m in 1:n){
+    probability <- 0
+    for (success in 0:n){
+      p1 <- find_probability(success, u, d, p, q, (m + 1)* log(u), n)
+      p2 <- find_probability(success, u, d, p, q, m*log(u), n)
+      probability <- probability + p1 - p2
+    }
+    if (! is.nan(probability)){
+      mean <- mean + m*log(u)*probability
+    }
+  }
+  return(mean)
+  
+}
+```
+
+Calculating the expected maximum
+```{r}
+accepting_value <- function(start, param, n){
+  return(start * param[1] ^ (expected_maximum(param[1], param[2], param[3], param[4], n)/log(param[1])))
+}
+```
+
+Experimental verification
+```{r}
+max.vector <- c()
+min.vector <- c()
+roma.vector <- c()
+rang.relative <- c()
+get_max_vector <- function(monthdatas){
+  # Running experimental checking for every month from 2008 - 2017
+  vector_counter <- 1
+  
+  for (i in 1:c-2){
+  # Calculating the parameters from previous month
+  data.previous <- monthdatas[[toString(i)]]
+  params <- estim_params(data.previous)
+
+  current_month <-monthdatas[[toString(i+1)]]
+  n <- length(current_month)
+  start <- current_month[1]
+  
+  exp_mx <- accepting_value(start, params, n )
+
+  # Getting maximum and minimum month price, for visualization of results
+  max.vector[vector_counter] <- max(current_month)
+  min.vector[vector_counter] <- min(current_month)
+  
+  
+  # Sorting an array with prices for estimating the rank
+  rangs <- sort(current_month, decreasing = TRUE)
+  if (max(current_month) < exp_mx){
+      # In the case, when there is no price in this month grater than expected
+      roma.vector[vector_counter] = current_month[length(current_month)]
+      rang.relative[vector_counter] <- which(rangs == current_month[length(current_month)])
+      vector_counter= vector_counter +1}
+  else{
+    for (i in current_month){
+      if (i >= exp_mx){
+        # We've got the price that is greater then expected maximum!
+        roma.vector[vector_counter] = i
+        rang.relative[vector_counter] <- which(rangs == i)
+        vector_counter= vector_counter +1
+        break
+      }}
+  }}
+
+  
+  df <- data.frame(roma.vector, max.vector, min.vector, rang.relative)
+  return(df)
+}
+
+mx <- get_max_vector(monthdatas)
+lines(mx$min.vector, col="green")
+```
+
+Plotting the ranks
+```{r}
+hist(mx$rang.relative, prob=TRUE,col="black",border="white", main="Expected maximum rangs distribution", xlab = "rangs")
+box(bty="l")
+lines(density(mx$rang.relative,na.rm=T),col="red",lwd=3)
+grid(nx=NA,ny=NULL,lty=1,lwd=1,col="gray")
+```
+
+Mean statistics of the ranks
+```{r}
+mean(mx$rang.relative)
+```
+
+Histogram with obtained prices
+```{r}
+plot(mx$roma.vector, xlab="Time Periods", ylab="Stock  Prices")
+lines(mx$max.vector, col="red")
+lines(mx$min.vector, col="green")
+```
+
+
+
