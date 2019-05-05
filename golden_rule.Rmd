@@ -1,0 +1,77 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+
+```{r}
+learning <- function(learn_sequence){
+  return(max(learn_sequence))
+}
+
+
+golden_rule <- function(numbers, n){
+  test_quantity <- round(length(numbers)*n)
+  #print(paste("Quantity", test_quantity))
+  maximum <- learning(numbers[1:test_quantity])
+  
+  for (price in numbers[test_quantity + 1:length(numbers)-1]){
+    if (!is.na(price)){
+    if (price >= maximum){return(price)}
+    }}
+  return(numbers[length(numbers)])
+}
+```
+
+```{r}
+predict_period_golden <- function(current){
+  n <- exp(1)^(-1)
+  #n <- 0.12
+  prices <- coredata(current)
+  return(c(prices[1], golden_rule(prices, n), max(prices), min(prices)))
+ 
+}
+```
+
+
+```{r}
+results_golden <- function(splitted_data){
+  buy <- c()
+  chosen <- c()
+  maximum <- c()
+  minimum <- c()
+  profit.difference <- c()
+  
+  c <- 1
+  for (i in 1 : (length(splitted_data))){
+    res <- predict_period_golden(splitted_data[[i]])
+    buy[c] <- res[1]
+    chosen[c] <- res[2]
+    maximum[c] <- res[3]
+    minimum[c] <- res[4]
+    profit.difference[c] <- (res[2] - res[1])/res[1]
+    
+    c <- c + 1
+  }
+
+
+  df <- data.frame(chosen, buy, maximum, minimum, profit.difference)
+  return(df)
+}
+```
+
+
+Calculate final results.
+
+```{r}
+gold.results <- results_golden(splitted_3)
+
+mean_profit <- mean(gold.results$profit.difference)
+stdev <- sd(gold.results$profit.difference)
+lower <- m - 1.96*s/sqrt(length(gold.results$profit.difference))
+upper <- m + 1.96*s/sqrt(length(gold.results$profit.difference))
+result <- cbind(mean_profit, stdev, lower, upper)
+result
+```
+

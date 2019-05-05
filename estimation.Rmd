@@ -1,0 +1,89 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+Consist of functions for calculation of different expression for binomial model
+```{r}
+# Estimating probability getting up -- p, the value of going up and down -- u and d
+estim_params <- function(monthly_data){
+  ups <- 1
+  downs <- 1
+  up.days <- 0
+  down.days <- 0
+  
+  n <- length(monthly_data)
+  previous <-monthly_data[1]
+  
+  
+  for (current in monthly_data[2:n]){
+    x <- current/previous
+    
+  
+    if (x >0 & x < 1) {
+      downs = downs * x
+      down.days = down.days + 1
+     
+    }
+    if (x > 1){
+      
+      ups = ups * x
+      up.days = up.days + 1
+    }
+    if (x == 1){
+      n = n - 1
+    }
+    previous = current
+  }
+  
+  
+  up <- ups ^ (1/up.days)
+  down <- downs ^ (1/down.days)
+  
+  p <- up.days / (n-1) # p to go up
+  
+
+  return(c(up, down, p, 1-p))
+} 
+
+```
+
+
+```{r}
+comb = function(n, x) {
+  return(factorial(n) / factorial(n-x) / factorial(x))
+}
+```
+
+
+
+Calculating probability that such number is the maximum in the sequence
+```{r}
+find_probability_sym <- function(p1, p2, q, n){
+  total <- 0
+  for (i in q:n){
+    if (i < (q + n)/2){
+      l <- q - i + n
+      plus <- comb(n, l)*p1^i*p2^(n-i)}
+    else{
+      plus <- comb(n, i)*p1^i*p2^(n - i)}
+    if (is.na(plus)){
+      plus <- 0
+    }
+    total <- total + plus
+  }
+  return(total)
+  }
+```
+
+Calculation of expected maximum distance the price approaches up
+```{r}
+expected_maximum_sym <- function(p1, p2, n){
+  expected <- 0
+  for (q in 1:n){
+    expected <- expected + find_probability_sym(p1, p2, q, n)
+    
+  }
+  return(expected)
+}
+```
+

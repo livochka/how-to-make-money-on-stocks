@@ -1,0 +1,25 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+Select and clean data for futher analysis.
+```{r}
+library(data.table)
+library(quantmod)
+library(ggplot2)
+start <- as.Date('2008-01-01')
+end <- as.Date('2018-01-01')
+
+data <- getSymbols("PVH", src = "yahoo", from = start, to = end, env=NULL)$PVH.Close
+names(data)[1]<-paste("Price.Close")
+```
+
+
+```{r}
+splitted_3 <- split(data, f = "months", drop=FALSE, k = 4)
+#print(splitted_3)
+```
+
+```{r}
+plot(data)
+```

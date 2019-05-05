@@ -1,0 +1,87 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+predict_period <- function(previous, current){
+  previous <- coredata(previous)
+  current <- coredata(current)
+  
+  params <- estim_params( previous[ (length(previous)/2) : length(previous)])
+  
+  u <- params[1]
+  d <- params[2]
+  p <- params[3]
+  q <- params[4]
+  n <- length(current)
+  
+  prices <- log(current)
+  rangs <- sort(prices, decreasing = TRUE)
+  log_exp <- prices[1] + log(u) * expected_maximum_sym(p, q, n)
+  log_delta <- n/4 * (log(u) + log(d))
+  exp_max <- log_exp + log_delta
+  
+  if (!is.na(exp_max)){
+  if (max(prices) < exp_max){
+        return(c(exp(1)^prices[n], exp(1)^max(prices), exp(1)^min(prices), exp(1)^round(exp_max, 3), exp(1)^prices[1], which(rangs == prices[n])))
+  }
+  ind <- 0
+  for (price in prices){
+    ind <- ind + 1
+      if (price >= exp_max){
+        return(c(exp(1)^price, exp(1)^max(prices), exp(1)^min(prices), exp(1)^round(exp_max, 3), exp(1)^prices[1], which(rangs == price)))}}}
+  else{
+    return(c(NA, NA, NA, NA,NA))}
+}
+
+```
+
+```{r}
+
+results_binomial <- function(splitted_data){
+  chosen <- c()
+  maximum <- c()
+  minimum <- c()
+  exp_max <- c()
+  profit.difference <- c()
+  buy <- c()
+  rang <- c()
+  c <- 1
+
+  for (i in 1 : (length(splitted_data)-1)){
+    res <- predict_period(splitted_data[[i]], splitted_data[[i+1]])
+    chosen[c] <- res[1]
+    maximum[c] <- res[2]
+    minimum[c] <- res[3]
+    exp_max[c] <- res[4]
+    rang[c] <- res[6]
+    profit.difference[c] <- (res[1] - res[5])/res[5]
+    buy[c] <- res[5]
+     c <- c + 1
+   
+  }
+
+
+  df <- data.frame(chosen, buy, maximum, minimum, exp_max, profit.difference, rang)
+  return(df)
+}
+
+bin.results <- results_binomial(splitted_3)
+
+```
+
+```{r}
+options(warn=-1)
+```
+
+```{r}
+mean_profit <- mean(bin.results$profit.difference)
+stdev <- sd(bin.results$profit.difference)
+lower <- m - 1.96*s/sqrt(length(bin.results$profit.difference))
+upper <- m + 1.96*s/sqrt(length(bin.results$profit.difference))
+result <- cbind(mean_profit, stdev, lower, upper)
+result
+```
+

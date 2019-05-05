@@ -1,0 +1,105 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+golden_index <- function(n, numbers){
+  rangs <- sort(numbers, decreasing = TRUE)
+  test_quantity <- round(length(numbers)*n)
+  if(test_quantity < 1){test_quantity <- 1}
+  maximum <- learning(numbers[1:test_quantity])
+  if (!is.na(maximum)){
+  last_n <- 0
+  for (i in numbers[test_quantity + 1:length(numbers) - 1]){
+    if (!is.na(i)){
+    last_n <- i
+    if (i * 100 >  maximum * 100){
+      #cat('returned rank', (which(rangs==i)))
+      return(which(rangs == i))
+      }
+  }}
+  return(which(rangs == last_n))}
+  else{return (NA)}
+}
+
+```
+
+
+
+```{r}
+find_opt_n <- function(numbers){
+  n <- seq(0.01, 0.38, by=0.01)
+  ranks <- c()
+  index <- 1
+  
+  for (i in n){
+    rank <- golden_index(i, numbers)
+      if (!is.na(rank)){
+        ranks[index] <- rank
+      }
+    
+    index <- index + 1
+    
+  
+  }
+  ranks.data <- data.frame(n, ranks)
+  #print(ranks.data)
+  #cat('minimizing rank n', with(ranks.data, n[which.min(ranks)]))
+  min_rank <- min(ranks.data$ranks)
+  ns <- c(with(ranks.data, n[ranks == min_rank]))
+  #print(ns)
+  return(mean(ns))
+}
+```
+
+
+```{r}
+predict_period_golden_upd <- function(previous, current){
+  prices <- coredata(current)
+  n <- find_opt_n(coredata(previous))
+  return(c(prices[1], golden_rule(prices, n), max(prices), min(prices)))
+ 
+}
+```
+
+
+```{r}
+results_golden_upd <- function(splitted_data){
+  buy <- c()
+  chosen <- c()
+  maximum <- c()
+  minimum <- c()
+  profit.difference <- c()
+  
+  c <- 1
+  for (i in 1 : (length(splitted_data)-1)){
+    res <- predict_period_golden_upd(splitted_data[[i]], splitted_data[[i+1]])
+    buy[c] <- res[1]
+    chosen[c] <- res[2]
+    maximum[c] <- res[3]
+    minimum[c] <- res[4]
+    profit.difference[c] <- (res[2] - res[1])/res[1]
+    
+    c <- c + 1
+  }
+
+
+  df <- data.frame(chosen, buy, maximum, minimum, profit.difference)
+  return(df)
+}
+```
+
+Calculate final results.
+
+```{r}
+options(warn=-1)
+gold_upd.results <- results_golden_upd(splitted_3)
+
+mean_profit <- mean(gold_upd.results$profit.difference)
+stdev <- sd(gold_upd.results$profit.difference)
+lower <- m - 1.96*s/sqrt(length(gold_upd.results$profit.difference))
+upper <- m + 1.96*s/sqrt(length(gold_upd.results$profit.difference))
+result <- cbind(mean_profit, stdev, lower, upper)
+result
+```
