@@ -2,7 +2,7 @@
 Maximizing chances for selling stocks at optimal price. Investment decision theory, stopping theory, valuing stocks.
 
 
-##Run experiments in following order
+## Run experiments in following order
 Start with data_selection, it uploades needed files.
 
 For binomial theory:
